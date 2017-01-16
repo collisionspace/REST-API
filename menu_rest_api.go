@@ -3,14 +3,13 @@ package main
 import (
     "encoding/json"
     "net/http"
-    "strings"
 )
 
 func main() {
-     http.HandleFunc("/menu/", func(w http.ResponseWriter, r *http.Request) {
-        item := strings.SplitN(r.URL.Path, "/", 3)[2]
+     http.HandleFunc("/menu/beer", func(w http.ResponseWriter, r *http.Request) {
+       
 
-        data, err := queryMenu(item)
+        data, err := queryBeers()
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
@@ -19,9 +18,23 @@ func main() {
         w.Header().Set("Content-Type", "application/json; charset=utf-8")
         json.NewEncoder(w).Encode(data)
     })
+
+    http.HandleFunc("/menu/food", func(w http.ResponseWriter, r *http.Request) {
+       
+
+        data, err := queryFood()
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+        }
+
+        w.Header().Set("Content-Type", "application/json; charset=utf-8")
+        json.NewEncoder(w).Encode(data)
+    })
+    
     http.ListenAndServe(":8080", nil)
 }
-func queryMenu(item string) (beer, error) {
+func queryBeers() (beer, error) {
     resp, err := http.Get("http://127.0.0.1:28017/menu/beers/")
     if err != nil {
         return beer{}, err
@@ -38,10 +51,38 @@ func queryMenu(item string) (beer, error) {
     return d, nil
 }
 
+func queryFood() (foods, error) {
+    resp, err := http.Get("http://127.0.0.1:28017/menu/items/")
+    if err != nil {
+        return foods{}, err
+    }
+
+    defer resp.Body.Close()
+
+    var d foods
+
+    if err := json.NewDecoder(resp.Body).Decode(&d); err != nil {
+        return foods{}, err
+    }
+
+    return d, nil
+}
+
 type beer struct {
     Beers []struct {
 		Name string `json:"name"`
 		Price int `json:"price"`
 		Kind string `json:"kind"`
+    } `json:"rows"`
+}
+
+type foods struct {
+    Food []struct {
+	Name string `json:"name"`
+	Price float64 `json:"price"`
+	Kind string `json:"kind"`
+	About string `json:"about"`
+	Quantity int `json:"quantity"`
+	Ingredients []string `json:"ingredients"`
     } `json:"rows"`
 }
